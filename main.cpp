@@ -1,4 +1,13 @@
-﻿#include <cmath>
+﻿/*
+* How to run for Windows Visual Studios:
+* 1. mkdir build
+* 2. cd build
+* 3. cmake ..
+* 4. cmake --build .
+* 5. cd ..
+* 6. build\Debug\tinyrenderer.exe obj\diablo3_pose\diablo3_pose.obj
+*/
+#include <cmath>
 #include <tuple>
 #include "geometry.h"
 #include "model.h"
