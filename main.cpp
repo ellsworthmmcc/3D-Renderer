@@ -8,6 +8,8 @@
 * 6. build\Debug\tinyrenderer.exe obj\diablo3_pose\diablo3_pose.obj
 * 
 * Alternative:
+* cmake -Bbuild && cmake --build build -j && build\Debug\tinyrenderer obj/african_head/african_head.obj
+* cmake -Bbuild && cmake --build build -j && build\Debug\tinyrenderer obj/boggie/body.obj
 * cmake -Bbuild && cmake --build build -j && build\Debug\tinyrenderer obj/diablo3_pose/diablo3_pose.obj
 */
 #include <cmath>
@@ -193,5 +195,5 @@ int main(int argc, char** argv) {
   // line_testing();
   // generate_wireframe(argc, argv);
   // triangle_testing();
-  generate_triangle_rasterization(argc, argv);
+  // generate_triangle_rasterization(argc, argv);
 }
