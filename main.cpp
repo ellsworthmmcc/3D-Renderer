@@ -180,8 +180,10 @@ void triangle_bounding_box(int ax, int ay, int az, int bx, int by, int bz, int c
 
   rasterize_triangle(ax, ay, bx, by, cx, cy, total_area,
     [&](int x, int y, double alpha, double beta, double gamma) {
-      unsigned char z = static_cast<unsigned char>(alpha * az + beta * bz + gamma * cz);
-      framebuffer.set(x, y, { z });
+      unsigned char blue_intensity = static_cast<unsigned char>(alpha * 255 + beta * 0 + gamma * 0);
+      unsigned char green_intensity = static_cast<unsigned char>(alpha * 0 + beta * 255 + gamma * 0);
+      unsigned char red_intensity = static_cast<unsigned char>(alpha * 0 + beta * 0 + gamma * 255);
+      framebuffer.set(x, y, { blue_intensity, green_intensity, red_intensity, 255 });
     }
   );
 }
@@ -198,7 +200,7 @@ int triangle_bounding_testing() {
 int triangle_bounding_testing_depth() {
   constexpr int width = 64;
   constexpr int height = 64;
-  TGAImage framebuffer(width, height, TGAImage::GRAYSCALE);
+  TGAImage framebuffer(width, height, TGAImage::RGB);
 
   int ax = 17, ay = 4, az = 13;
   int bx = 55, by = 39, bz = 128;
