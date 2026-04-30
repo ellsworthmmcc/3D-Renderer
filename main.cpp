@@ -72,9 +72,10 @@ int line_testing() {
   return 0;
 }
 
-std::tuple<int, int> project(vec3 v) { // First of all, (x,y) is an orthogonal projection of the vector (x,y,z).
+std::tuple<int, int, int> project(vec3 v) { // First of all, (x,y) is an orthogonal projection of the vector (x,y,z).
   return { (v.x + 1.) * width / 2,   // Second, since the input models are scaled to have fit in the [-1,1]^3 world coordinates,
-           (v.y + 1.) * height / 2 }; // we want to shift the vector (x,y) and then scale it to span the entire screen.
+           (v.y + 1.) * height / 2,  // we want to shift the vector (x,y) and then scale it to span the entire screen.
+           (v.z + 1.) * 255./2 }; 
 }
 
 int generate_wireframe(int argc, char** argv) {
@@ -87,9 +88,9 @@ int generate_wireframe(int argc, char** argv) {
   TGAImage framebuffer(width, height, TGAImage::RGB);
 
   for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
-    auto [ax, ay] = project(model.vert(i, 0));
-    auto [bx, by] = project(model.vert(i, 1));
-    auto [cx, cy] = project(model.vert(i, 2));
+    auto [ax, ay, az] = project(model.vert(i, 0));
+    auto [bx, by, bz] = project(model.vert(i, 1));
+    auto [cx, cy, cz] = project(model.vert(i, 2));
     line(ax, ay, bx, by, framebuffer, red);
     line(bx, by, cx, cy, framebuffer, red);
     line(cx, cy, ax, ay, framebuffer, red);
@@ -97,7 +98,7 @@ int generate_wireframe(int argc, char** argv) {
 
   for (int i = 0; i < model.nverts(); i++) { // iterate through all vertices
     vec3 v = model.vert(i);            // get i-th vertex
-    auto [x, y] = project(v);          // project it to the screen
+    auto [x, y, z] = project(v);          // project it to the screen
     framebuffer.set(x, y, white);
   }
 
@@ -188,6 +189,27 @@ void triangle_bounding_box(int ax, int ay, int az, int bx, int by, int bz, int c
   );
 }
 
+// TODO: Repeat Code, Fix Later
+void triangle_bounding_box(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy, int cz, TGAImage& zbuffer, TGAImage& framebuffer, TGAColor color, bool cull = true) {
+  int bbminx = std::min(std::min(ax, bx), cx); // bounding box for the triangle
+  int bbminy = std::min(std::min(ay, by), cy); // defined by its top left and bottom right corners
+  int bbmaxx = std::max(std::max(ax, bx), cx);
+  int bbmaxy = std::max(std::max(ay, by), cy);
+  double total_area = signed_triangle_area(ax, ay, bx, by, cx, cy);
+  if (cull) {
+    if (total_area < 1) return; // backface culling + discarding triangles that cover less than a pixel
+  }
+
+  rasterize_triangle(ax, ay, bx, by, cx, cy, total_area,
+    [&](int x, int y, double alpha, double beta, double gamma) {
+      unsigned char z = static_cast<unsigned char>(alpha * az + beta * bz + gamma * cz);
+      if (z <= zbuffer.get(x, y)[0]) return;
+      zbuffer.set(x, y, { z });
+      framebuffer.set(x, y, color);
+    }
+  );
+}
+
 int triangle_bounding_testing() {
   TGAImage framebuffer(width, height, TGAImage::RGB);
   triangle_bounding_box(7, 45, 35, 100, 45, 60, framebuffer, red, false);
@@ -197,7 +219,7 @@ int triangle_bounding_testing() {
   return 0;
 }
 
-int triangle_bounding_testing_depth() {
+int triangle_bounding_testing_vertex_colors() {
   constexpr int width = 64;
   constexpr int height = 64;
   TGAImage framebuffer(width, height, TGAImage::RGB);
@@ -223,9 +245,9 @@ int generate_triangle_rasterization(int argc, char** argv) {
   TGAImage framebuffer(width, height, TGAImage::RGB);
 
   for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
-    auto [ax, ay] = project(model.vert(i, 0));
-    auto [bx, by] = project(model.vert(i, 1));
-    auto [cx, cy] = project(model.vert(i, 2));
+    auto [ax, ay, az] = project(model.vert(i, 0));
+    auto [bx, by, bz] = project(model.vert(i, 1));
+    auto [cx, cy, cz] = project(model.vert(i, 2));
     TGAColor rnd;
     for (int c = 0; c < 3; c++) rnd[c] = std::rand() % 255;
     triangle_bounding_box(ax, ay, bx, by, cx, cy, framebuffer, rnd);
@@ -235,10 +257,35 @@ int generate_triangle_rasterization(int argc, char** argv) {
   return 0;
 }
 
+int generate_triangle_rasterization_depth(int argc, char** argv) {
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " obj/model.obj" << std::endl;
+    return 1;
+  }
+
+  Model model(argv[1]);
+  TGAImage framebuffer(width, height, TGAImage::RGB);
+  TGAImage     zbuffer(width, height, TGAImage::GRAYSCALE);
+
+  for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
+    auto [ax, ay, az] = project(model.vert(i, 0));
+    auto [bx, by, bz] = project(model.vert(i, 1));
+    auto [cx, cy, cz] = project(model.vert(i, 2));
+    TGAColor rnd;
+    for (int c = 0; c < 3; c++) rnd[c] = std::rand() % 255;
+    triangle_bounding_box(ax, ay, az, bx, by, bz, cx, cy, cz, zbuffer, framebuffer, rnd);
+  }
+
+  framebuffer.write_tga_file("framebuffer.tga");
+  zbuffer.write_tga_file("zbuffer.tga");
+  return 0;
+}
+
 int main(int argc, char** argv) {
   // line_testing();
   // generate_wireframe(argc, argv);
   // triangle_bounding_testing();
-  triangle_bounding_testing_depth();
+  // triangle_bounding_testing_vertex_colors();
   // generate_triangle_rasterization(argc, argv);
+  generate_triangle_rasterization_depth(argc, argv);
 }
