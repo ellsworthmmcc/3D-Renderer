@@ -2,6 +2,7 @@
 #include <sstream>
 #include "model.h"
 
+/* Painter's Algorithm
 Model::Model(const std::string filename) {
   std::ifstream in;
   in.open(filename, std::ifstream::in);
@@ -53,6 +54,38 @@ Model::Model(const std::string filename) {
       facet_vrt2[i * 3 + j] = facet_vrt[idx[i] * 3 + j];
 
   facet_vrt = facet_vrt2;                  // store the sorted triangles
+}
+*/
+
+Model::Model(const std::string filename) {
+  std::ifstream in;
+  in.open(filename, std::ifstream::in);
+  if (in.fail()) return;
+  std::string line;
+  while (!in.eof()) {
+    std::getline(in, line);
+    std::istringstream iss(line.c_str());
+    char trash;
+    if (!line.compare(0, 2, "v ")) {
+      iss >> trash;
+      vec3 v;
+      for (int i : {0, 1, 2}) iss >> v[i];
+      verts.push_back(v);
+    }
+    else if (!line.compare(0, 2, "f ")) {
+      int f, t, n, cnt = 0;
+      iss >> trash;
+      while (iss >> f >> trash >> t >> trash >> n) {
+        facet_vrt.push_back(--f);
+        cnt++;
+      }
+      if (3 != cnt) {
+        std::cerr << "Error: the obj file is supposed to be triangulated" << std::endl;
+        return;
+      }
+    }
+  }
+  std::cerr << "# v# " << nverts() << " f# " << nfaces() << std::endl;
 }
 
 int Model::nverts() const { return verts.size(); }
